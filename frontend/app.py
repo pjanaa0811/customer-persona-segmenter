@@ -3,6 +3,9 @@ import requests
 import pandas as pd
 from pathlib import Path
 import pickle
+import html
+
+import altair as alt
 
 
 # ============================================================
@@ -24,36 +27,34 @@ st.set_page_config(
 THEME_CSS = """
 <style>
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-    --ink:          #16181D;
-    --ink-soft:     #5B6270;
-    --ink-faint:    #8B93A1;
-    --canvas:       #F3F4F7;
-    --glass:        rgba(255, 255, 255, 0.72);
-    --glass-strong: rgba(255, 255, 255, 0.88);
-    --red:          #C1272D;
-    --red-deep:     #97171D;
-    --red-soft:     #E8827F;
-    --red-tint:     #FBEDED;
-    --line:         rgba(22, 24, 29, 0.08);
-    --line-red:     rgba(193, 39, 45, 0.16);
-    --shadow:       0 10px 30px rgba(22, 24, 29, 0.06);
+    --bg:           #0a0a0a;
+    --card:         #171717;
+    --card-raised:  #1c1c1c;
+    --fg:           #fafafa;
+    --fg-soft:      #d4d4d8;
+    --muted:        #a1a1aa;
+    --faint:        #71717a;
+    --green:        #22c55e;
+    --green-hover:  #4ade80;
+    --green-ink:    #052e16;
+    --green-text:   #86efac;
+    --green-tint:   rgba(34, 197, 94, 0.12);
+    --green-line:   rgba(34, 197, 94, 0.35);
+    --line:         rgba(255, 255, 255, 0.08);
+    --line-strong:  rgba(255, 255, 255, 0.16);
+    --shadow:       0 18px 44px rgba(0, 0, 0, 0.45);
 }
 
 /* ---------------- Background ---------------- */
 
 .stApp {
-    background-color: var(--canvas);
+    background-color: var(--bg);
     background-image:
-        radial-gradient(1000px 560px at 6% -10%, rgba(193, 39, 45, 0.12), transparent 58%),
-        radial-gradient(820px 480px at 100% 0%, rgba(193, 39, 45, 0.08), transparent 55%),
-        radial-gradient(700px 520px at 92% 92%, rgba(193, 39, 45, 0.07), transparent 60%),
-        radial-gradient(600px 420px at -4% 88%, rgba(151, 23, 29, 0.06), transparent 60%),
-        linear-gradient(180deg, #F7F7F9 0%, #F1F2F5 55%, #EFF0F3 100%);
-    background-attachment: fixed;
-    color: var(--ink);
+        radial-gradient(900px 500px at 50% -12%, rgba(255, 255, 255, 0.035), transparent 60%);
+    color: var(--fg);
 }
 
 [data-testid="stHeader"] {
@@ -64,137 +65,528 @@ THEME_CSS = """
     visibility: hidden;
 }
 
+/* hide the little link icon Streamlit adds next to headings */
+[data-testid="stHeaderActionElements"] {
+    display: none;
+}
+
 .block-container {
-    padding-top: 2.6rem;
+    padding-top: 4.2rem;
     padding-bottom: 4rem;
     max-width: 1280px;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 /* ---------------- Type ---------------- */
 
-html, body, [class*="css"], .stMarkdown, p, li, label {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    color: var(--ink);
+.stApp, .stApp p, .stApp li, .stApp label, .stApp input,
+.stApp textarea, .stApp button, .stMarkdown {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-h1, h2, h3, h4 {
-    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-    color: var(--ink);
-    letter-spacing: -0.02em;
+span[data-testid="stIconMaterial"] {
+    font-family: "Material Symbols Rounded" !important;
 }
 
-h1 {
-    font-size: 2.6rem;
+.stApp h1, .stApp h2, .stApp h3, .stApp h4 {
+    font-family: 'Inter', sans-serif;
+    color: var(--fg);
+    letter-spacing: -0.025em;
+}
+
+.stApp h1 {
+    font-size: 2.4rem;
     font-weight: 800;
     line-height: 1.12;
-    margin-bottom: 0.2rem;
 }
 
-h2 {
-    font-size: 1.45rem;
+.stApp h2 {
+    font-size: 1.6rem;
     font-weight: 700;
     margin-top: 0.4rem;
-    padding-left: 0.85rem;
-    border-left: 3px solid var(--red);
 }
 
-h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
+.stApp h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
 }
 
-p, li {
-    color: var(--ink-soft);
+.stApp h4 {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.stApp p, .stApp li {
+    color: var(--muted);
     line-height: 1.65;
 }
 
+.stApp strong {
+    color: var(--fg);
+    font-weight: 600;
+}
+
 [data-testid="stCaptionContainer"] p {
-    color: var(--ink-faint);
+    color: var(--faint);
 }
 
 hr {
     border-color: var(--line);
-    margin: 2.2rem 0;
+    margin: 2.4rem 0;
 }
 
-/* ---------------- Lede paragraph ---------------- */
+a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+}
 
-.lede {
-    max-width: 62ch;
+/* ---------------- Top navigation ---------------- */
+
+.stApp .topnav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.55rem 0 0.95rem 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 2.6rem;
+}
+
+.stApp .topnav .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--fg);
+}
+
+.stApp .topnav .brand-mark {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+    color: var(--green);
+    font-size: 0.8rem;
+}
+
+.stApp .topnav .links {
+    display: flex;
+    gap: 1.7rem;
+}
+
+.stApp .topnav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 0.15s ease;
+}
+
+.stApp .topnav a:hover {
+    color: var(--fg);
+}
+
+.stApp .topnav a.nav-cta {
+    color: var(--fg);
+    background: var(--card);
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    padding: 0.4rem 0.95rem;
+}
+
+.stApp .topnav a.nav-cta:hover {
+    border-color: var(--green-line);
+    background: var(--green-tint);
+}
+
+/* ---------------- Hero ---------------- */
+
+.stApp .hero {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    gap: 2.5rem;
+    align-items: center;
+    padding: 0.5rem 0 2.5rem 0;
+}
+
+.stApp .hero::before {
+    content: "";
+    position: absolute;
+    inset: -140px 0;
+    background: radial-gradient(
+        ellipse 40% 50% at 66% 50%,
+        rgba(34, 197, 94, 0.17),
+        transparent 100%
+    );
+    pointer-events: none;
+}
+
+.stApp .hero > * {
+    position: relative;
+}
+
+.stApp .hero-title {
+    font-size: clamp(2.3rem, 4.4vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+    color: var(--fg);
+}
+
+.stApp .g-pink,
+.stApp .g-cyan {
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+
+.stApp .g-pink {
+    background-image: linear-gradient(90deg, #f472b6, #c084fc);
+}
+
+.stApp .g-cyan {
+    background-image: linear-gradient(90deg, #22d3ee, #38bdf8);
+}
+
+.stApp .hero .lede {
+    max-width: 44ch;
     font-size: 1.02rem;
-    color: var(--ink-soft);
-    margin: 0.6rem 0 0.2rem 0;
+    line-height: 1.65;
+    color: var(--muted);
+    margin: 1.1rem 0 1.7rem 0;
 }
 
-.lede strong {
-    color: var(--red-deep);
+.stApp .hero .lede strong {
+    color: var(--fg);
+}
+
+.stApp .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+}
+
+.stApp a.btn-primary,
+.stApp a.btn-ghost {
+    display: inline-block;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.7rem 1.5rem;
+    border-radius: 8px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.stApp a.btn-primary {
+    background: var(--green);
+    color: var(--green-ink);
+    border: 1px solid var(--green);
+}
+
+.stApp a.btn-primary:hover {
+    background: var(--green-hover);
+    border-color: var(--green-hover);
+}
+
+.stApp a.btn-ghost {
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--line-strong);
+}
+
+.stApp a.btn-ghost:hover {
+    border-color: var(--green-line);
+    background: var(--green-tint);
+}
+
+/* hero cards */
+
+.stApp .hero-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    align-items: start;
+}
+
+.stApp .hcard {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.1rem 1.2rem;
+    box-shadow: var(--shadow);
+}
+
+.stApp .hc-tall {
+    grid-row: 1 / span 2;
+    margin-top: 2.2rem;
+}
+
+.stApp .hc-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.stApp .hc-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--fg);
+    line-height: 1.3;
+}
+
+.stApp .pill {
+    flex-shrink: 0;
+    background: var(--green-tint);
+    color: var(--green-text);
+    border-radius: 999px;
+    padding: 0.15rem 0.65rem;
+    font-size: 0.72rem;
     font-weight: 600;
 }
 
-/* ---------------- Glass cards ---------------- */
+.stApp .hc-big {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--fg);
+    margin-top: 0.5rem;
+}
+
+.stApp .hc-big span {
+    font-size: 0.85rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--faint);
+    margin-left: 0.25rem;
+}
+
+.stApp .hc-desc {
+    font-size: 0.84rem;
+    line-height: 1.55;
+    color: var(--muted);
+    margin: 0.45rem 0 0.9rem 0;
+}
+
+.stApp .hc-bar {
+    height: 8px;
+    background: #262626;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.stApp .hc-bar div {
+    height: 100%;
+    background: var(--green);
+    border-radius: 999px;
+}
+
+.stApp .hc-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 0 0;
+}
+
+.stApp .hc-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.35rem 0;
+    font-size: 0.86rem;
+    line-height: 1.4;
+    color: var(--fg-soft);
+}
+
+.stApp .hc-list li::before {
+    content: "✓";
+    color: var(--green);
+    font-weight: 700;
+}
+
+.stApp .hc-list li span {
+    margin-left: auto;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.stApp .hc-row {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.stApp .hc-icon {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--green-tint);
+    border: 1px solid var(--green-line);
+    color: var(--green);
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.stApp .hc-row .hc-desc {
+    margin: 0.15rem 0 0 0;
+}
+
+/* ---------------- Cards (containers marked with span.glass) ---------------- */
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(span.glass) {
-    background: var(--glass);
-    backdrop-filter: blur(18px) saturate(160%);
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
-    border: 1px solid var(--line-red);
-    border-radius: 18px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
     box-shadow: var(--shadow);
+}
+
+/* ---------------- Buttons ---------------- */
+
+.stButton > button {
+    background: var(--green);
+    color: var(--green-ink);
+    border: 1px solid var(--green);
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.6rem 1.1rem;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.stButton > button:hover,
+.stButton > button:focus:not(:active) {
+    background: var(--green-hover);
+    border-color: var(--green-hover);
+    color: var(--green-ink);
+}
+
+.stButton > button:active {
+    background: var(--green);
+    color: var(--green-ink);
+}
+
+.stButton > button p,
+.stDownloadButton > button p {
+    color: inherit;
+    font-weight: 600;
+}
+
+.stDownloadButton > button {
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.6rem 1.1rem;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.stDownloadButton > button:hover,
+.stDownloadButton > button:focus:not(:active) {
+    background: var(--green-tint);
+    border-color: var(--green-line);
+    color: var(--green-text);
+}
+
+/* ---------------- Inputs ---------------- */
+
+div[data-baseweb="input"],
+div[data-baseweb="base-input"],
+div[data-baseweb="select"] > div {
+    background-color: var(--card);
+    border-color: var(--line-strong);
+    border-radius: 8px;
+}
+
+div[data-baseweb="input"]:focus-within,
+div[data-baseweb="select"]:focus-within > div {
+    border-color: var(--green);
+}
+
+span[data-baseweb="tag"] {
+    background-color: var(--green-tint);
+    border: 1px solid var(--green-line);
+    border-radius: 6px;
+    color: var(--green-text);
+}
+
+span[data-baseweb="tag"] span {
+    color: var(--green-text);
+}
+
+[data-testid="stFileUploaderDropzone"] {
+    background: var(--card);
+    border: 1px dashed var(--line-strong);
+    border-radius: 12px;
+}
+
+[data-testid="stFileUploaderDropzone"]:hover {
+    border-color: var(--green-line);
 }
 
 /* ---------------- Alerts ---------------- */
 
 div[data-testid="stAlertContainer"] {
-    border-radius: 12px;
+    border-radius: 10px;
     border: 1px solid var(--line);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
 }
 
 /* ---------------- Tables, charts, expander ---------------- */
 
-[data-testid="stDataFrame"],
-[data-testid="stExpander"] {
-    background: var(--glass);
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
+[data-testid="stDataFrame"] {
+    background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 14px;
-    box-shadow: var(--shadow);
+    border-radius: 12px;
     overflow: hidden;
 }
 
+[data-testid="stExpander"] {
+    background: transparent;
+    border: none;
+}
+
+[data-testid="stExpander"] details {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+}
+
 [data-testid="stExpander"] summary:hover {
-    color: var(--red);
+    color: var(--green-text);
 }
 
 [data-testid="stVegaLiteChart"] {
-    background: var(--glass);
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: 12px;
     padding: 1.1rem;
-    box-shadow: var(--shadow);
 }
 
 /* ---------------- Sidebar ---------------- */
 
 [data-testid="stSidebar"] {
-    background: rgba(255, 255, 255, 0.62);
-    backdrop-filter: blur(24px) saturate(160%);
-    -webkit-backdrop-filter: blur(24px) saturate(160%);
-    border-right: 1px solid var(--line-red);
+    background: var(--bg);
+    border-right: 1px solid var(--line);
 }
 
 [data-testid="stSidebar"] h1 {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     font-weight: 700;
 }
 
 [data-testid="stSidebar"] h3 {
-    font-size: 0.95rem;
-    color: var(--red-deep);
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--green-text);
 }
 
 [data-testid="stSidebar"] li {
@@ -204,17 +596,44 @@ div[data-testid="stAlertContainer"] {
 /* ---------------- Metric cards ---------------- */
 
 [data-testid="stMetric"] {
-    background: var(--glass);
+    background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 0.8rem 1rem;
-    box-shadow: var(--shadow);
+    border-radius: 12px;
+    padding: 0.85rem 1.1rem;
+}
+
+[data-testid="stMetricLabel"] p {
+    color: var(--muted);
+    font-size: 0.84rem;
+}
+
+[data-testid="stMetricValue"] {
+    color: var(--fg);
+    font-weight: 700;
+}
+
+/* ---------------- Responsive ---------------- */
+
+@media (max-width: 900px) {
+    .stApp .hero {
+        grid-template-columns: 1fr;
+    }
+    .stApp .hero-cards {
+        grid-template-columns: 1fr;
+    }
+    .stApp .hc-tall {
+        grid-row: auto;
+        margin-top: 0;
+    }
+    .stApp .topnav .links {
+        display: none;
+    }
 }
 
 /* ---------------- Motion preference ---------------- */
 
 @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; }
+    * { transition: none !important; scroll-behavior: auto !important; }
 }
 
 </style>
@@ -233,7 +652,7 @@ def glass_card():
 # ============================================================
 
 API_URL = "http://127.0.0.1:8000"
-RED = "#C1272D"
+GREEN = "#22c55e"
 
 
 # ============================================================
@@ -338,24 +757,6 @@ if missing_columns:
 
 
 # ============================================================
-# HEADER
-# ============================================================
-
-st.title("Customer Persona Segmenter")
-
-st.markdown(
-    "<p class='lede'>Group customers into behavioural personas from annual "
-    "income and spending score, using a <strong>K-Means</strong> clustering "
-    "model served over FastAPI.</p>",
-    unsafe_allow_html=True
-)
-
-st.caption("K-Means clustering · StandardScaler · FastAPI · Streamlit")
-
-st.divider()
-
-
-# ============================================================
 # BASE ANALYTICS
 # ============================================================
 
@@ -399,6 +800,106 @@ persona_summary["Percentage"] = (
 
 
 # ============================================================
+# HEADER — NAVIGATION + HERO
+# ============================================================
+
+top_row = persona_counts.iloc[0]
+top_persona = str(top_row["Persona"])
+top_customers = int(top_row["Customers"])
+top_share = float(top_row["Percentage"])
+top_income = float(persona_summary.loc[top_persona, "Average_Income"])
+top_spending = float(persona_summary.loc[top_persona, "Average_Spending"])
+
+persona_list_html = "".join(
+    f"<li>{html.escape(str(row.Persona))}<span>{int(row.Customers):,}</span></li>"
+    for row in persona_counts.itertuples(index=False)
+)
+
+if evaluation_data is not None:
+    model_note = f"Silhouette score {selected_silhouette_score:.2f} on scaled income and spending."
+else:
+    model_note = "Income and spending, scaled with StandardScaler."
+
+nav_html = (
+    "<div class='topnav'>"
+    "<div class='brand'><span class='brand-mark'>◆</span>Customer Persona Segmenter</div>"
+    "<div class='links'>"
+    "<a href='#predict' target='_self'>Predict</a>"
+    "<a href='#personas' target='_self'>Personas</a>"
+    "<a href='#analytics' target='_self'>Analytics</a>"
+    "<a href='#model' target='_self'>Model</a>"
+    "</div>"
+    "<a class='nav-cta' href='#upload' target='_self'>Upload CSV</a>"
+    "</div>"
+)
+
+hero_html = (
+    "<div class='hero'>"
+
+    # left: headline, lede, actions
+    "<div>"
+    "<div class='hero-title'>"
+    "<span class='g-pink'>Customer</span> personas<br>"
+    "from <span class='g-cyan'>K-Means</span> clustering"
+    "</div>"
+    "<p class='lede'>Group customers into behavioural personas from annual "
+    "income and spending score, using a <strong>K-Means</strong> clustering "
+    "model served over FastAPI.</p>"
+    "<div class='hero-actions'>"
+    "<a class='btn-primary' href='#predict' target='_self'>Predict a persona</a>"
+    "<a class='btn-ghost' href='#upload' target='_self'>Upload a CSV</a>"
+    "</div>"
+    "</div>"
+
+    # right: live data cards
+    "<div class='hero-cards'>"
+
+    "<div class='hcard hc-tall'>"
+    "<div class='hc-head'>"
+    f"<span class='hc-title'>{html.escape(top_persona)}</span>"
+    "<span class='pill'>Largest</span>"
+    "</div>"
+    f"<div class='hc-big'>{top_customers:,}<span>customers</span></div>"
+    f"<p class='hc-desc'>Average income {top_income:.1f}k and average "
+    f"spending score {top_spending:.1f}.</p>"
+    f"<div class='hc-bar'><div style='width:{top_share:.1f}%'></div></div>"
+    f"<ul class='hc-list'>{persona_list_html}</ul>"
+    "</div>"
+
+    "<div class='hcard'>"
+    "<div class='hc-row'>"
+    "<div class='hc-icon'>↔</div>"
+    "<div>"
+    "<div class='hc-title'>Income and spending</div>"
+    f"<div class='hc-big'>{correlation:.2f}<span>correlation</span></div>"
+    "</div>"
+    "</div>"
+    "<p class='hc-desc'>Pearson coefficient across all "
+    f"{total_customers:,} customers.</p>"
+    "</div>"
+
+    "<div class='hcard'>"
+    "<div class='hc-row'>"
+    "<div class='hc-icon'>◆</div>"
+    "<div>"
+    "<div class='hc-title'>K-Means model</div>"
+    f"<p class='hc-desc'>{number_of_personas} personas from 2 features.</p>"
+    "</div>"
+    "</div>"
+    f"<p class='hc-desc'>{model_note}</p>"
+    "</div>"
+
+    "</div>"
+    "</div>"
+)
+
+st.markdown(nav_html, unsafe_allow_html=True)
+st.markdown(hero_html, unsafe_allow_html=True)
+
+st.divider()
+
+
+# ============================================================
 # KPI DASHBOARD
 # ============================================================
 
@@ -435,7 +936,7 @@ st.divider()
 # CUSTOMER PERSONA PREDICTION
 # ============================================================
 
-st.header("Predict a persona")
+st.header("Predict a persona", anchor="predict")
 
 prediction_container = st.container(border=True)
 
@@ -540,7 +1041,7 @@ st.divider()
 # CUSTOMER PERSONA PROFILES
 # ============================================================
 
-st.header("The three personas")
+st.header("The three personas", anchor="personas")
 
 profile_columns = st.columns(3)
 
@@ -572,7 +1073,7 @@ st.divider()
 # PHASE 12 — ANALYTICS OVERVIEW
 # ============================================================
 
-st.header("Advanced analytics overview")
+st.header("Advanced analytics overview", anchor="analytics")
 
 analytics_col1, analytics_col2, analytics_col3 = st.columns(3)
 
@@ -645,7 +1146,7 @@ st.bar_chart(
     distribution_chart,
     x="Persona",
     y="Percentage",
-    color=RED
+    color=GREEN
 )
 
 st.caption(
@@ -670,7 +1171,7 @@ st.bar_chart(
     income_chart,
     x="persona",
     y="Average Income (k)",
-    color=RED
+    color=GREEN
 )
 
 
@@ -691,7 +1192,7 @@ st.bar_chart(
     spending_chart,
     x="persona",
     y="Average Spending",
-    color=RED
+    color=GREEN
 )
 
 st.divider()
@@ -829,7 +1330,7 @@ st.caption(
 
 st.divider()
 
-st.header("🤖 Model Evaluation")
+st.header("🤖 Model Evaluation", anchor="model")
 
 st.caption(
     "Evaluation of the K-Means clustering model using "
@@ -883,7 +1384,8 @@ if evaluation_data is not None:
         })
 
         st.line_chart(
-            elbow_df.set_index("K")
+            elbow_df.set_index("K"),
+            color=GREEN
         )
 
         st.caption(
@@ -906,7 +1408,8 @@ if evaluation_data is not None:
         })
 
         st.line_chart(
-            silhouette_df.set_index("K")
+            silhouette_df.set_index("K"),
+            color=GREEN
         )
 
         st.caption(
@@ -1087,7 +1590,7 @@ st.bar_chart(
     persona_counts,
     x="Persona",
     y="Customers",
-    color=RED
+    color=GREEN
 )
 
 st.divider()
@@ -1099,12 +1602,34 @@ st.divider()
 
 st.header("Segmentation map")
 
-st.scatter_chart(
-    df,
-    x="annual_income_k",
-    y="spending_score",
-    color="persona"
+persona_order = sorted(df["persona"].unique())
+persona_palette = ["#22c55e", "#f472b6", "#22d3ee", "#facc15", "#a78bfa"]
+
+segmentation_map = (
+    alt.Chart(df[["annual_income_k", "spending_score", "persona"]])
+    .mark_circle(size=70, opacity=0.85)
+    .encode(
+        x=alt.X("annual_income_k:Q", title="Annual income (k)"),
+        y=alt.Y("spending_score:Q", title="Spending score"),
+        color=alt.Color(
+            "persona:N",
+            scale=alt.Scale(
+                domain=persona_order,
+                range=persona_palette[:len(persona_order)]
+            ),
+            legend=alt.Legend(title="Persona", orient="bottom")
+        ),
+        tooltip=[
+            alt.Tooltip("persona:N", title="Persona"),
+            alt.Tooltip("annual_income_k:Q", title="Income (k)"),
+            alt.Tooltip("spending_score:Q", title="Spending score")
+        ]
+    )
+    .properties(height=420)
+    .interactive()
 )
+
+st.altair_chart(segmentation_map, use_container_width=True)
 
 st.caption(
     "Each point is one customer, coloured by the persona assigned "
@@ -1152,7 +1677,7 @@ st.divider()
 # UPLOAD CUSTOMER CSV
 # ============================================================
 
-st.header("📤 Upload Customer CSV")
+st.header("📤 Upload Customer CSV", anchor="upload")
 
 st.write(
     "Upload a CSV containing `annual_income_k` and "
@@ -1234,7 +1759,8 @@ if uploaded_file is not None:
                 st.bar_chart(
                     uploaded_distribution,
                     x="Persona",
-                    y="Customers"
+                    y="Customers",
+                    color=GREEN
                 )
 
                 csv_data = segmented_data.to_csv(
@@ -1326,7 +1852,8 @@ st.dataframe(
 )
 
 st.bar_chart(
-    cluster_counts.set_index("Cluster")["Customers"]
+    cluster_counts.set_index("Cluster")["Customers"],
+    color=GREEN
 )
 
 
